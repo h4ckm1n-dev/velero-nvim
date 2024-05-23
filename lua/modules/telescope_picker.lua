@@ -1,6 +1,6 @@
 -- modules/telescope_picker.lua
 
-local TelescopePicker = {}
+local M = {}
 
 local function invoke_callback(callback, value)
 	if type(callback) == "function" then
@@ -10,7 +10,7 @@ local function invoke_callback(callback, value)
 	end
 end
 
-function TelescopePicker.select_from_list(prompt_title, list, callback)
+function M.select_from_list(prompt_title, list, callback)
 	if type(list) ~= "table" or #list == 0 then
 		print("Error: List must be a non-empty table.")
 		return
@@ -40,7 +40,7 @@ function TelescopePicker.select_from_list(prompt_title, list, callback)
 		:find()
 end
 
-function TelescopePicker.multi_select_from_list(prompt_title, list, callback)
+function M.multi_select_from_list(prompt_title, list, callback)
 	if type(list) ~= "table" or #list == 0 then
 		print("Error: List must be a non-empty table.")
 		return
@@ -86,7 +86,7 @@ function TelescopePicker.multi_select_from_list(prompt_title, list, callback)
 		:find()
 end
 
-function TelescopePicker.input(prompt_title, callback)
+function M.input(prompt_title, callback)
 	if type(callback) ~= "function" then
 		print("Error: Callback must be a function.")
 		return
@@ -100,4 +100,4 @@ function TelescopePicker.input(prompt_title, callback)
 	end
 end
 
-return TelescopePicker
+return M
