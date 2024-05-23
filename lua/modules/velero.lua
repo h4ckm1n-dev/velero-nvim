@@ -41,36 +41,29 @@ function Velero.create_backup()
 	end
 
 	TelescopePicker.select_from_list("Select Namespace for Backup", namespace_list, function(selected_namespace)
-		TelescopePicker.input("Do you want to select specific resources? (yes/no)", function(answer)
+		TelescopePicker.input("Do you want to select a specific resource? (yes/no)", function(answer)
 			if answer:lower() == "yes" or answer:lower() == "y" then
 				local resource_list = fetch_resources(selected_namespace)
 				if not resource_list then
 					return
 				end
 
-				TelescopePicker.multi_select_from_list("Select Resources for Backup", resource_list,
-					function(selected_resources)
-						if #selected_resources == 0 then
-							print("No resources selected. Aborting backup.")
-							return
+				TelescopePicker.select_from_list("Select Resource for Backup", resource_list, function(selected_resource)
+					TelescopePicker.input("Enter Backup Name", function(backup_name)
+						local cmd = string.format(
+							"velero backup create %s --include-namespaces=%s --include-resources=%s",
+							backup_name,
+							selected_namespace,
+							selected_resource
+						)
+						local result, err = Command.run_shell_command(cmd)
+						if result then
+							print("Velero backup created successfully: \n" .. result)
+						else
+							log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
 						end
-
-						local resources = table.concat(selected_resources, ",")
-						TelescopePicker.input("Enter Backup Name", function(backup_name)
-							local cmd = string.format(
-								"velero backup create %s --include-namespaces=%s --include-resources=%s",
-								backup_name,
-								selected_namespace,
-								resources
-							)
-							local result, err = Command.run_shell_command(cmd)
-							if result then
-								print("Velero backup created successfully: \n" .. result)
-							else
-								log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
-							end
-						end)
 					end)
+				end)
 			else
 				TelescopePicker.input("Enter Backup Name", function(backup_name)
 					local cmd = string.format(
@@ -114,23 +107,15 @@ function Velero.restore_backup()
 		end
 
 		TelescopePicker.select_from_list("Select Namespace to Restore To", namespace_list, function(target_namespace)
-			TelescopePicker.input("Do you want to select specific resources? (yes/no)", function(answer)
+			TelescopePicker.input("Do you want to select a specific resource? (yes/no)", function(answer)
 				if answer:lower() == "yes" or answer:lower() == "y" then
 					local resource_list = fetch_resources(target_namespace)
 					if not resource_list then
 						return
 					end
 
-					TelescopePicker.multi_select_from_list(
-						"Select Resources to Restore",
-						resource_list,
-						function(selected_resources)
-							if #selected_resources == 0 then
-								print("No resources selected. Aborting restore.")
-								return
-							end
-
-							local resources = table.concat(selected_resources, ",")
+					TelescopePicker.select_from_list("Select Resource to Restore", resource_list,
+						function(selected_resource)
 							TelescopePicker.input("Enter Restore Name", function(restore_name)
 								local cmd = string.format(
 									"velero restore create %s --from-backup=%s --namespace-mappings=%s:%s --include-resources=%s",
@@ -138,7 +123,7 @@ function Velero.restore_backup()
 									selected_backup,
 									selected_backup,
 									target_namespace,
-									resources
+									selected_resource
 								)
 								local result, err = Command.run_shell_command(cmd)
 								if result then
@@ -147,8 +132,7 @@ function Velero.restore_backup()
 									log_error("Failed to create Velero restore: " .. (err or "Unknown error"))
 								end
 							end)
-						end
-					)
+						end)
 				else
 					TelescopePicker.input("Enter Restore Name", function(restore_name)
 						local cmd = string.format(

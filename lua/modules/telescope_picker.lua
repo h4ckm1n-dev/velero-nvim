@@ -38,52 +38,6 @@ function M.select_from_list(prompt_title, list, callback)
 		:find()
 end
 
-function M.multi_select_from_list(prompt_title, list, callback)
-	if type(list) ~= "table" or #list == 0 then
-		print("Error: List must be a non-empty table.")
-		return
-	end
-
-	if type(callback) ~= "function" then
-		print("Error: Callback must be a function.")
-		return
-	end
-
-	local action_state = require("telescope.actions.state")
-	local actions = require("telescope.actions")
-
-	require("telescope.pickers")
-		.new({}, {
-			prompt_title = prompt_title,
-			finder = require("telescope.finders").new_table({
-				results = list,
-			}),
-			sorter = require("telescope.config").values.generic_sorter({}),
-			attach_mappings = function(_, map)
-				map("i", "<CR>", function(prompt_bufnr)
-					local current_picker = action_state.get_current_picker(prompt_bufnr)
-					local selections = current_picker:get_multi_selection()
-					local selected_items = {}
-					for _, entry in ipairs(selections) do
-						table.insert(selected_items, entry.value)
-					end
-					actions.close(prompt_bufnr)
-					if #selected_items > 0 then
-						invoke_callback(callback, selected_items)
-					end
-				end)
-				map("i", "<Tab>", function(prompt_bufnr)
-					local current_picker = action_state.get_current_picker(prompt_bufnr)
-					local selection = action_state.get_selected_entry()
-					current_picker._multi:toggle(selection)
-					current_picker:refresh(false)
-				end)
-				return true
-			end,
-		})
-		:find()
-end
-
 function M.input(prompt_title, callback)
 	if type(callback) ~= "function" then
 		print("Error: Callback must be a function.")
