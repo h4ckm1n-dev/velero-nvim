@@ -13,7 +13,9 @@ local function fetch_namespaces()
 		log_error("Failed to fetch namespaces: " .. (err or "No namespaces found."))
 		return nil
 	end
-	return vim.split(namespaces, "\n", { trimempty = true })
+	local namespace_list = vim.split(namespaces, "\n", { trimempty = true })
+	print("Fetched namespaces: ", vim.inspect(namespace_list))
+	return namespace_list
 end
 
 local function fetch_resources(namespace)
@@ -22,13 +24,9 @@ local function fetch_resources(namespace)
 		log_error("Failed to fetch resources: " .. (err or "No resources found."))
 		return nil
 	end
-	local filtered_resources = {}
-	for _, resource in ipairs(vim.split(resources, "\n", { trimempty = true })) do
-		if string.match(resource, "^" .. namespace .. "/") then
-			table.insert(filtered_resources, resource)
-		end
-	end
-	return filtered_resources
+	local resource_list = vim.split(resources, "\n", { trimempty = true })
+	print("Fetched resources for namespace ", namespace, ": ", vim.inspect(resource_list))
+	return resource_list
 end
 
 local function fetch_backups()
@@ -37,18 +35,22 @@ local function fetch_backups()
 		log_error("Failed to fetch backups: " .. (err or "No backups found."))
 		return nil
 	end
-	return vim.split(backups, "\n", { trimempty = true })
+	local backup_list = vim.split(backups, "\n", { trimempty = true })
+	print("Fetched backups: ", vim.inspect(backup_list))
+	return backup_list
 end
 
 function Velero.create_backup()
 	local namespace_list = fetch_namespaces()
-	if not namespace_list then
+	if not namespace_list or vim.tbl_isempty(namespace_list) then
+		log_error("Namespace list is empty or nil.")
 		return
 	end
 
 	TelescopePicker.select_from_list("Select Namespace for Backup", namespace_list, function(selected_namespace)
 		local resource_list = fetch_resources(selected_namespace)
-		if not resource_list then
+		if not resource_list or vim.tbl_isempty(resource_list) then
+			log_error("Resource list is empty or nil.")
 			return
 		end
 
@@ -84,19 +86,22 @@ end
 
 function Velero.restore_backup()
 	local backup_list = fetch_backups()
-	if not backup_list then
+	if not backup_list or vim.tbl_isempty(backup_list) then
+		log_error("Backup list is empty or nil.")
 		return
 	end
 
 	TelescopePicker.select_from_list("Select Backup to Restore", backup_list, function(selected_backup)
 		local namespace_list = fetch_namespaces()
-		if not namespace_list then
+		if not namespace_list or vim.tbl_isempty(namespace_list) then
+			log_error("Namespace list is empty or nil.")
 			return
 		end
 
 		TelescopePicker.select_from_list("Select Namespace to Restore To", namespace_list, function(target_namespace)
 			local resource_list = fetch_resources(target_namespace)
-			if not resource_list then
+			if not resource_list or vim.tbl_isempty(resource_list) then
+				log_error("Resource list is empty or nil.")
 				return
 			end
 
