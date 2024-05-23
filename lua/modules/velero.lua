@@ -27,15 +27,6 @@ local function fetch_resources(namespace)
 	return vim.split(resources, "\n", { trimempty = true })
 end
 
-local function fetch_backups()
-	local backups, err = Command.run_shell_command("velero backup get -o name")
-	if not backups or backups == "" then
-		log_error("Failed to fetch backups: " .. (err or "No backups found."))
-		return nil
-	end
-	return vim.split(backups, "\n", { trimempty = true })
-end
-
 function Velero.create_backup()
 	local namespace_list = fetch_namespaces()
 	if not namespace_list then
@@ -85,34 +76,21 @@ function Velero.restore_backup()
 	end
 
 	TelescopePicker.select_from_list("Select Backup to Restore", backup_list, function(selected_backup)
-		local namespace_list = fetch_namespaces()
-		if not namespace_list then
-			return
-		end
-
-		TelescopePicker.select_from_list("Select Namespace to Restore To", namespace_list, function(target_namespace)
-			local resource_list = fetch_resources(target_namespace)
-			if not resource_list then
-				return
-			end
-
-			TelescopePicker.select_from_list("Select Resources to Restore", resource_list, function(selected_resource)
-				TelescopePicker.input("Enter Restore Name", function(restore_name)
-					local cmd = string.format(
-						"velero restore create %s --from-backup=%s --namespace-mappings=%s:%s --include-resources=%s",
-						restore_name,
-						selected_backup,
-						selected_backup,
-						target_namespace,
-						selected_resource
-					)
-					local result, err = Command.run_shell_command(cmd)
-					if result then
-						print("Velero restore created successfully: \n" .. result)
-					else
-						log_error("Failed to create Velero restore: " .. (err or "Unknown error"))
-					end
-				end)
+		TelescopePicker.input("Enter Restore Name", function(restore_name)
+			TelescopePicker.input("Enter Namespace to Restore To", function(target_namespace)
+				local cmd = string.format(
+					"velero restore create %s --from-backup=%s --namespace-mappings=%s:%s",
+					restore_name,
+					selected_backup,
+					selected_backup,
+					target_namespace
+				)
+				local result, err = Command.run_shell_command(cmd)
+				if result then
+					print("Velero restore created successfully: \n" .. result)
+				else
+					log_error("Failed to create Velero restore: " .. (err or "Unknown error"))
+				end
 			end)
 		end)
 	end)
