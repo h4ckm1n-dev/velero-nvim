@@ -14,7 +14,6 @@ local function fetch_namespaces()
 		return nil
 	end
 	local namespace_list = vim.split(namespaces, "\n", { trimempty = true })
-	print("Fetched namespaces: ", vim.inspect(namespace_list))
 	return namespace_list
 end
 
@@ -25,7 +24,6 @@ local function fetch_resources(namespace)
 		return nil
 	end
 	local resource_list = vim.split(resources, "\n", { trimempty = true })
-	print("Fetched resources for namespace ", namespace, ": ", vim.inspect(resource_list))
 	return resource_list
 end
 
@@ -36,7 +34,6 @@ local function fetch_backups()
 		return nil
 	end
 	local backup_list = vim.split(backups, "\n", { trimempty = true })
-	print("Fetched backups: ", vim.inspect(backup_list))
 	return backup_list
 end
 
@@ -48,28 +45,48 @@ function Velero.create_backup()
 	end
 
 	TelescopePicker.select_from_list("Select Namespace for Backup", namespace_list, function(selected_namespace)
-		local resource_list = fetch_resources(selected_namespace)
-		if not resource_list or vim.tbl_isempty(resource_list) then
-			log_error("Resource list is empty or nil.")
-			return
-		end
+		TelescopePicker.select_from_list("Do you want to select specific resources? (yes/no)", { "yes", "no" },
+			function(user_choice)
+				if user_choice == "yes" then
+					local resource_list = fetch_resources(selected_namespace)
+					if not resource_list or vim.tbl_isempty(resource_list) then
+						log_error("Resource list is empty or nil.")
+						return
+					end
 
-		TelescopePicker.select_from_list("Select Resources for Backup", resource_list, function(selected_resource)
-			TelescopePicker.input("Enter Backup Name", function(backup_name)
-				local cmd = string.format(
-					"velero backup create %s --include-namespaces=%s --include-resources=%s",
-					backup_name,
-					selected_namespace,
-					selected_resource
-				)
-				local result, err = Command.run_shell_command(cmd)
-				if result then
-					print("Velero backup created successfully: \n" .. result)
+					TelescopePicker.select_from_list("Select Resources for Backup", resource_list,
+						function(selected_resource)
+							TelescopePicker.input("Enter Backup Name", function(backup_name)
+								local cmd = string.format(
+									"velero backup create %s --include-namespaces=%s --include-resources=%s",
+									backup_name,
+									selected_namespace,
+									selected_resource
+								)
+								local result, err = Command.run_shell_command(cmd)
+								if result then
+									print("Velero backup created successfully: \n" .. result)
+								else
+									log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
+								end
+							end)
+						end)
 				else
-					log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
+					TelescopePicker.input("Enter Backup Name", function(backup_name)
+						local cmd = string.format(
+							"velero backup create %s --include-namespaces=%s",
+							backup_name,
+							selected_namespace
+						)
+						local result, err = Command.run_shell_command(cmd)
+						if result then
+							print("Velero backup created successfully: \n" .. result)
+						else
+							log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
+						end
+					end)
 				end
 			end)
-		end)
 	end)
 end
 
