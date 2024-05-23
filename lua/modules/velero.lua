@@ -37,6 +37,22 @@ local function fetch_backups()
 	return backup_list
 end
 
+local function wait_for_operation(operation_type, name)
+	while true do
+		local cmd = string.format("velero %s describe %s --details", operation_type, name)
+		local result, err = Command.run_shell_command(cmd)
+		if not result then
+			log_error(string.format("Failed to describe Velero %s: %s", operation_type, err or "Unknown error"))
+			return
+		end
+		print(result)
+		if result:match("Phase: Completed") then
+			break
+		end
+		vim.wait(5000) -- Wait for 5 seconds before polling again
+	end
+end
+
 function Velero.create_backup()
 	local namespace_list = fetch_namespaces()
 	if not namespace_list or vim.tbl_isempty(namespace_list) then
@@ -66,6 +82,7 @@ function Velero.create_backup()
 								local result, err = Command.run_shell_command(cmd)
 								if result then
 									print("Velero backup created successfully: \n" .. result)
+									wait_for_operation("backup", backup_name)
 								else
 									log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
 								end
@@ -81,23 +98,13 @@ function Velero.create_backup()
 						local result, err = Command.run_shell_command(cmd)
 						if result then
 							print("Velero backup created successfully: \n" .. result)
+							wait_for_operation("backup", backup_name)
 						else
 							log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
 						end
 					end)
 				end
 			end)
-	end)
-end
-
-function Velero.describe_backup()
-	TelescopePicker.input("Enter Backup Name to Describe", function(backup_name)
-		local result, err = Command.run_shell_command(string.format("velero backup describe %s", backup_name))
-		if result then
-			print("Velero backup description: \n" .. result)
-		else
-			log_error("Failed to describe Velero backup: " .. (err or "Unknown error"))
-		end
 	end)
 end
 
@@ -135,6 +142,7 @@ function Velero.restore_backup()
 					local result, err = Command.run_shell_command(cmd)
 					if result then
 						print("Velero restore created successfully: \n" .. result)
+						wait_for_operation("restore", restore_name)
 					else
 						log_error("Failed to create Velero restore: " .. (err or "Unknown error"))
 					end
@@ -144,14 +152,15 @@ function Velero.restore_backup()
 	end)
 end
 
+function Velero.describe_backup()
+	TelescopePicker.input("Enter Backup Name to Describe", function(backup_name)
+		wait_for_operation("backup", backup_name)
+	end)
+end
+
 function Velero.describe_restore()
 	TelescopePicker.input("Enter Restore Name to Describe", function(restore_name)
-		local result, err = Command.run_shell_command(string.format("velero restore describe %s", restore_name))
-		if result then
-			print("Velero restore description: \n" .. result)
-		else
-			log_error("Failed to describe Velero restore: " .. (err or "Unknown error"))
-		end
+		wait_for_operation("restore", restore_name)
 	end)
 end
 
