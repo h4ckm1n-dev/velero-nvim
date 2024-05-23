@@ -1,5 +1,3 @@
--- modules/velero.lua
-
 local Command = require("modules.command")
 local TelescopePicker = require("modules.telescope_picker")
 
@@ -24,7 +22,13 @@ local function fetch_resources(namespace)
 		log_error("Failed to fetch resources: " .. (err or "No resources found."))
 		return nil
 	end
-	return vim.split(resources, "\n", { trimempty = true })
+	local filtered_resources = {}
+	for _, resource in ipairs(vim.split(resources, "\n", { trimempty = true })) do
+		if string.match(resource, "^" .. namespace .. "/") then
+			table.insert(filtered_resources, resource)
+		end
+	end
+	return filtered_resources
 end
 
 local function fetch_backups()
