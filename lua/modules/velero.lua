@@ -1,5 +1,3 @@
--- modules/velero.lua
-
 local Command = require("modules.command")
 local TelescopePicker = require("modules.telescope_picker")
 
@@ -44,15 +42,13 @@ function Velero.create_backup()
 
 	TelescopePicker.select_from_list("Select Namespace for Backup", namespace_list, function(selected_namespace)
 		TelescopePicker.input("Do you want to select specific resources? (yes/no)", function(answer)
-			if answer:lower() == "yes" then
+			if answer:lower() == "yes" or answer:lower() == "y" then
 				local resource_list = fetch_resources(selected_namespace)
 				if not resource_list then
 					return
 				end
 
-				TelescopePicker.multi_select_from_list(
-					"Select Resources for Backup",
-					resource_list,
+				TelescopePicker.multi_select_from_list("Select Resources for Backup", resource_list,
 					function(selected_resources)
 						if #selected_resources == 0 then
 							print("No resources selected. Aborting backup.")
@@ -74,8 +70,7 @@ function Velero.create_backup()
 								log_error("Failed to create Velero backup: " .. (err or "Unknown error"))
 							end
 						end)
-					end
-				)
+					end)
 			else
 				TelescopePicker.input("Enter Backup Name", function(backup_name)
 					local cmd = string.format(
@@ -120,7 +115,7 @@ function Velero.restore_backup()
 
 		TelescopePicker.select_from_list("Select Namespace to Restore To", namespace_list, function(target_namespace)
 			TelescopePicker.input("Do you want to select specific resources? (yes/no)", function(answer)
-				if answer:lower() == "yes" then
+				if answer:lower() == "yes" or answer:lower() == "y" then
 					local resource_list = fetch_resources(target_namespace)
 					if not resource_list then
 						return

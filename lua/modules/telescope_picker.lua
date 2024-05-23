@@ -1,5 +1,3 @@
--- modules/telescope_picker.lua
-
 local M = {}
 
 local function invoke_callback(callback, value)
