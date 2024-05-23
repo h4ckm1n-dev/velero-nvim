@@ -1,55 +1,31 @@
 local M = {}
 
-local function invoke_callback(callback, value)
-	if type(callback) == "function" then
-		callback(value)
-	else
-		print("Error: Callback is not a function.")
-	end
+function M.select_from_list(prompt, items, callback)
+	require('telescope.pickers').new({}, {
+		prompt_title = prompt,
+		finder = require('telescope.finders').new_table {
+			results = items,
+		},
+		sorter = require('telescope.config').values.generic_sorter({}),
+		attach_mappings = function(_, map)
+			map('i', '<CR>', function(prompt_bufnr)
+				local selection = require('telescope.actions.state').get_selected_entry()
+				require('telescope.actions').close(prompt_bufnr)
+				callback(selection[1])
+			end)
+			return true
+		end,
+	}):find()
 end
 
-function M.select_from_list(prompt_title, list, callback)
-	if type(list) ~= "table" or #list == 0 then
-		print("Error: List must be a non-empty table.")
-		return
-	end
-
-	if type(callback) ~= "function" then
-		print("Error: Callback must be a function.")
-		return
-	end
-
-	require("telescope.pickers")
-		.new({}, {
-			prompt_title = prompt_title,
-			finder = require("telescope.finders").new_table({ results = list }),
-			sorter = require("telescope.config").values.generic_sorter({}),
-			attach_mappings = function(_, map)
-				map("i", "<CR>", function(prompt_bufnr)
-					local selection = require("telescope.actions.state").get_selected_entry(prompt_bufnr)
-					require("telescope.actions").close(prompt_bufnr)
-					if selection then
-						invoke_callback(callback, selection.value)
-					end
-				end)
-				return true
-			end,
-		})
-		:find()
-end
-
-function M.input(prompt_title, callback)
-	if type(callback) ~= "function" then
-		print("Error: Callback must be a function.")
-		return
-	end
-
-	local input = vim.fn.input(prompt_title .. ": ")
-	if input ~= "" then
-		invoke_callback(callback, input)
-	else
-		print("Error: " .. prompt_title .. " cannot be empty.")
-	end
+function M.input(prompt, callback)
+	vim.ui.input({ prompt = prompt .. ": " }, function(input)
+		if input then
+			callback(input)
+		else
+			print("Input cancelled")
+		end
+	end)
 end
 
 return M
