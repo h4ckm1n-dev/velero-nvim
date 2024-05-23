@@ -1,5 +1,4 @@
 -- /velero-nvim/lua/init.lua
-
 local M = {}
 
 function M.setup()
